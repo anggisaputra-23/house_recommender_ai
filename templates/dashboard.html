@@ -1,0 +1,180 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="hero mb-4">
+  <div class="row align-items-center g-3">
+    <div class="col-lg-8">
+      <span class="hero-badge"><i class="bi bi-lightning-charge-fill"></i> Ringkasan Cepat</span>
+      <h1 class="display-6 fw-bold mb-2 mt-2">Dashboard Data Properti</h1>
+      <p class="text-muted mb-0">Ikhtisar dataset properti — jumlah data, gambaran harga, dan arti skor rekomendasi dalam bahasa sederhana.</p>
+    </div>
+    <div class="col-lg-4">
+      <div class="hero-sidecard">
+        <div class="small text-uppercase opacity-75 mb-1"><i class="bi bi-info-circle me-1"></i>Panduan singkat</div>
+        <div class="fw-semibold mb-1">Skor peringkat mengukur kedekatan properti ke rumah ideal — semakin tinggi, semakin direkomendasikan.</div>
+        <div class="opacity-75 small">FuzzyScore menilai kecocokan properti berdasarkan kriteria yang telah ditentukan.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3 mb-5">
+  <div class="col-md-6">
+    <div class="card stat-card stat-accent-blue">
+      <div class="card-body">
+        <div class="stat-icon stat-icon-blue"><i class="bi bi-building"></i></div>
+        <div class="stat-label">Total Properti</div>
+        <div class="stat-value">{{ summary.total_houses }}</div>
+        <div class="stat-hint">Tersebar di {{ summary.cities_count }} kota</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-6">
+    <div class="card stat-card stat-accent-gold">
+      <div class="card-body">
+        <div class="stat-icon stat-icon-gold"><i class="bi bi-coin"></i></div>
+        <div class="stat-label">Harga Tertinggi</div>
+        <div class="stat-value">{{ summary.max_price }}</div>
+        <div class="stat-hint">Terendah {{ summary.min_price }}</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card info-card mb-4">
+  <div class="card-body p-4">
+    <div class="d-flex align-items-center gap-2 mb-3">
+      <i class="bi bi-grid-3x3-gap-fill text-primary fs-4"></i>
+      <h2 class="h5 fw-bold mb-0">Sekilas Dataset</h2>
+    </div>
+    <p class="text-secondary mb-3">
+      Dataset ini mencakup <strong>{{ summary.total_houses }} properti</strong> yang tersebar di <strong>{{ summary.cities_count }} kota</strong> di wilayah Jabodetabek.
+      Sebagian besar listing terkonsentrasi di tiga kota utama:
+    </p>
+    <div class="row g-3">
+      {% for city in summary.top_cities %}
+      <div class="col-md-4">
+        <div class="city-card d-flex align-items-center gap-3 p-3 rounded-3">
+          <div class="city-rank d-flex align-items-center justify-content-center rounded-circle flex-shrink-0">
+            <span class="fw-bold text-primary">{{ loop.index }}</span>
+          </div>
+          <div>
+            <div class="fw-semibold">{{ city.name }}</div>
+            <div class="small text-muted">{{ city.count }} properti ({{ city.pct }}%)</div>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<div class="card info-card mb-4">
+  <div class="card-body p-4">
+    <div class="d-flex align-items-center gap-2 mb-3">
+      <i class="bi bi-cash-stack text-warning fs-4"></i>
+      <h2 class="h5 fw-bold mb-0">Gambaran Harga</h2>
+    </div>
+    <p class="text-secondary mb-3">
+      Harga properti sangat bervariasi. Separuh properti (50%) memiliki harga antara <strong>{{ summary.price_q25 }}</strong> dan <strong>{{ summary.price_q75 }}</strong>,
+      yang menunjukkan bahwa sebagian besar properti berada di kisaran harga menengah. Harga rata-rata memang <strong>{{ summary.average_price }}</strong>,
+      tetapi nilai median <strong>{{ summary.median_price }}</strong> lebih mewakili kondisi umum karena tidak terpengaruh properti dengan harga ekstrem.
+    </p>
+    <div class="row g-3">
+      <div class="col-md-4">
+        <div class="price-box price-box-low p-3 rounded-3">
+          <div class="price-box-label">Paling Terjangkau</div>
+          <div class="fw-bold fs-5 price-value-low">{{ summary.min_price }}</div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="price-box price-box-mid p-3 rounded-3">
+          <div class="price-box-label">Nilai Tengah (Median)</div>
+          <div class="fw-bold fs-5 price-value-mid">{{ summary.median_price }}</div>
+          <div class="small text-muted">Lebih mewakili data</div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="price-box price-box-high p-3 rounded-3">
+          <div class="price-box-label">Paling Mahal</div>
+          <div class="fw-bold fs-5 price-value-high">{{ summary.max_price }}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-4">
+  <div class="col-lg-6">
+    <div class="card chart-card">
+      <div class="card-body">
+        <div class="d-flex align-items-center gap-2 mb-1">
+          <i class="bi bi-bar-chart-fill text-primary fs-5"></i>
+          <div class="chart-title mb-0">Jumlah rumah per kota</div>
+        </div>
+        <div class="chart-subtitle">Bogor dan Tangerang mendominasi hampir separuh dari total dataset.</div>
+        {{ city_volume_chart|safe }}
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-6">
+    <div class="card chart-card">
+      <div class="card-body">
+        <div class="d-flex align-items-center gap-2 mb-1">
+          <i class="bi bi-cash-stack text-warning fs-5"></i>
+          <div class="chart-title mb-0">Rata-rata harga per kota</div>
+        </div>
+        <div class="chart-subtitle">Membantu membandingkan tingkat harga antar wilayah.</div>
+        {{ city_price_chart|safe }}
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-4 mt-2">
+  <div class="col-lg-7">
+    <div class="card info-card h-100">
+      <div class="card-body p-4">
+        <div class="d-flex align-items-center justify-content-between gap-2 mb-3">
+          <div class="d-flex align-items-center gap-2">
+            <i class="bi bi-printer text-danger fs-4"></i>
+            <h2 class="h5 fw-bold mb-0">Cetak Laporan</h2>
+          </div>
+          <a href="{{ url_for('semua_pdf') }}" class="btn btn-outline-danger" target="_blank">
+            <i class="bi bi-filetype-pdf me-1"></i>Cetak Semua Hasil
+          </a>
+        </div>
+        <p class="text-secondary small mb-0">
+          Cetak data rekomendasi dan peringkat properti dalam satu dokumen PDF.
+        </p>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-5">
+    <div class="card info-card h-100">
+      <div class="card-body p-4">
+        <div class="d-flex align-items-center gap-2 mb-3">
+          <i class="bi bi-clock-history text-primary fs-4"></i>
+          <h2 class="h5 fw-bold mb-0">Aktivitas Terbaru</h2>
+        </div>
+        {% if activity_logs %}
+        <ul class="list-unstyled mb-0" style="max-height: 250px; overflow-y: auto;">
+          {% for log in activity_logs %}
+          <li class="d-flex align-items-start gap-2 py-2 border-bottom border-light">
+            <span class="small text-nowrap text-muted" style="min-width: 70px; font-size: 0.7rem;">{{ log.timestamp.strftime('%H:%M') }}</span>
+            <div>
+              <span class="fw-semibold small">{{ log.action }}</span>
+              {% if log.detail %}
+              <span class="small text-muted d-block" style="font-size: 0.78rem;">{{ log.detail }}</span>
+              {% endif %}
+            </div>
+          </li>
+          {% endfor %}
+        </ul>
+        {% else %}
+        <p class="text-muted small mb-0">Belum ada aktivitas. Mulai dengan melakukan prediksi atau rekomendasi.</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

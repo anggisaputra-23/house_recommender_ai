@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+
+{% macro render_field(field, col) %}
+<div class="col-md-{{ col }}">
+  <label class="form-label" for="{{ field.name }}">{{ field.label }}</label>
+  {% if field.type == 'select' %}
+  <select name="{{ field.name }}" id="{{ field.name }}" class="form-select" required>
+    <option value="">Pilih {{ field.label }}</option>
+    {% for option in field.options %}
+    <option value="{{ option }}" {% if form_data[field.name]|string == option|string %}selected{% endif %}>{{ option }}</option>
+    {% endfor %}
+  </select>
+  {% else %}
+  <input
+    name="{{ field.name }}"
+    id="{{ field.name }}"
+    type="{{ field.type }}"
+    class="form-control"
+    step="{{ field.step }}"
+    min="{{ field.min }}"
+    placeholder="{{ field.placeholder or '' }}"
+    value="{{ form_data[field.name] }}"
+    required
+  >
+  {% endif %}
+  {% if field.hint %}<div class="form-text">{{ field.hint }}</div>{% endif %}
+</div>
+{% endmacro %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-10">
+    <div class="hero mb-4">
+      <span class="hero-badge"><i class="bi bi-cpu"></i> Prediksi Harga</span>
+      <h1 class="h3 fw-bold mt-2 mb-2">Masukkan detail rumah untuk melihat estimasi harga</h1>
+      <p class="text-muted mb-0">Hasil ini adalah estimasi dari model Random Forest, bukan harga pasti. Gunakan sebagai referensi awal.</p>
+    </div>
+
+    <div class="card info-card mb-4">
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-md-4">
+            <div class="metric-explain">
+              <div class="d-flex align-items-center gap-2 mb-1">
+                <i class="bi bi-tag-fill text-primary"></i>
+                <div class="metric-name mb-0">PredictedPrice</div>
+              </div>
+              <div class="metric-title">Estimasi harga rumah</div>
+              <div class="metric-text">Perkiraan harga jual berdasarkan input yang Anda masukkan.</div>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="metric-explain">
+              <div class="d-flex align-items-center gap-2 mb-1">
+                <i class="bi bi-filter-circle-fill text-success"></i>
+                <div class="metric-name mb-0">FuzzyScore</div>
+              </div>
+              <div class="metric-title">Skor kecocokan</div>
+              <div class="metric-text">Semakin besar nilainya, semakin sesuai rumah dengan kriteria penilaian.</div>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="metric-explain">
+              <div class="d-flex align-items-center gap-2 mb-1">
+                <i class="bi bi-trophy-fill text-warning"></i>
+                <div class="metric-name mb-0">TOPSIS_Score</div>
+              </div>
+              <div class="metric-title">Skor peringkat akhir</div>
+              <div class="metric-text">Semakin tinggi, semakin dekat rumah tersebut ke pilihan terbaik.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card form-card mb-4">
+      <div class="card-body p-4">
+        <div class="d-flex align-items-center gap-2 mb-1">
+          <i class="bi bi-pencil-square text-primary fs-5"></i>
+          <h2 class="h4 mb-0">Form input</h2>
+        </div>
+        <p class="text-muted small mb-4">Kolom pilihan dibuat dropdown agar lebih cepat diisi dan mengurangi salah input.</p>
+        {% set sections = [
+          {'title': 'Lokasi', 'icon': 'bi-geo-alt-fill', 'desc': 'Kota lokasi rumah berada.', 'items': [('city', '12')]},
+          {'title': 'Ukuran', 'icon': 'bi-rulers', 'desc': 'Luas tanah dan luas bangunan rumah.', 'items': [('land_size_m2', '6'), ('building_size_m2', '6')]},
+          {'title': 'Ruangan & Fasilitas', 'icon': 'bi-house-gear-fill', 'desc': 'Jumlah ruangan dan fasilitas pendukung.', 'items': [('bedrooms', '4'), ('bathrooms', '4'), ('floors', '4'), ('carports', '4'), ('garages', '4'), ('building_age', '4')]},
+          {'title': 'Legalitas & Kondisi', 'icon': 'bi-patch-check-fill', 'desc': 'Status sertifikat dan kondisi rumah.', 'items': [('certificate', '4'), ('property_condition', '4'), ('furnishing', '4')]}
+        ] %}
+        <form method="post" class="row g-3">
+          {% for section in sections %}
+          <div class="col-12">
+            <div class="form-section-head {% if not loop.first %}mt-3{% endif %}">
+              <span class="form-section-icon"><i class="bi {{ section.icon }}"></i></span>
+              <div>
+                <div class="form-section-title">{{ section.title }}</div>
+                <div class="form-section-desc">{{ section.desc }}</div>
+              </div>
+            </div>
+          </div>
+          {% for item in section['items'] %}
+            {% for field in prediction_fields if field.name == item[0] %}
+              {{ render_field(field, item[1]) }}
+            {% endfor %}
+          {% endfor %}
+          {% endfor %}
+          <div class="col-12 d-flex flex-wrap gap-2 mt-4">
+            <button class="btn btn-primary px-4"><i class="bi bi-calculator me-1"></i>Prediksi</button>
+            <a href="{{ url_for('prediksi') }}" class="btn btn-outline-secondary px-3"><i class="bi bi-arrow-counterclockwise"></i></a>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    {% if prediction %}
+    <div class="card result-card mb-4">
+      <div class="card-body p-4">
+        <div class="d-flex align-items-center gap-2 text-uppercase text-white-50 small mb-2">
+          <i class="bi bi-check-circle-fill text-success"></i>
+          <span>Hasil Prediksi</span>
+        </div>
+        <div class="result-price">{{ prediction }}</div>
+        <div class="result-note mt-2">Ini adalah estimasi harga rumah berdasarkan kombinasi fitur yang Anda isi.</div>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

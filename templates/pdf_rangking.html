@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <title>Laporan Properti</title>
+  <style>
+    @page { size: A4; margin: 1.8cm; }
+    body { font-family: 'Segoe UI', Arial, sans-serif; color: #1e293b; font-size: 10pt; line-height: 1.5; }
+    .cover { text-align: center; padding: 3rem 0 2rem 0; border-bottom: 3px solid #2563eb; margin-bottom: 2rem; }
+    .cover h1 { color: #2563eb; font-size: 18pt; margin: 0.5rem 0; }
+    .cover p { color: #64748b; font-size: 9pt; }
+    .cover .user { color: #475569; font-size: 9pt; margin-top: 0.3rem; }
+    .section { margin-top: 1.5rem; }
+    .section-title { font-size: 12pt; font-weight: 700; color: #0f172a; border-bottom: 2px solid #2563eb; padding-bottom: 0.3rem; margin-bottom: 0.6rem; }
+    .info-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 0.8rem 1rem; margin-bottom: 1rem; font-size: 9pt; }
+    .info-box strong { color: #0f172a; }
+    table { width: 100%; border-collapse: collapse; font-size: 8pt; }
+    th { background: #2563eb; color: #fff; padding: 0.4rem 0.3rem; font-size: 7pt; text-transform: uppercase; text-align: left; }
+    td { padding: 0.3rem; border-bottom: 1px solid #e2e8f0; }
+    tr:nth-child(even) { background: #f8fafc; }
+    .rank { font-weight: 700; color: #2563eb; text-align: center; }
+    .price { font-weight: 600; }
+    .score { text-align: center; }
+    .page-break { page-break-before: always; }
+    .footer { text-align: center; color: #94a3b8; font-size: 7pt; margin-top: 2rem; border-top: 1px solid #e2e8f0; padding-top: 0.6rem; }
+    .no-data { color: #94a3b8; font-style: italic; font-size: 9pt; }
+  </style>
+</head>
+<body>
+  <div class="cover">
+    <h1>House Recommender AI</h1>
+    <p>Laporan Hasil Rekomendasi &amp; Peringkat Properti</p>
+    <div class="user">Oleh: {{ username }}</div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Data Rekomendasi</div>
+    {% if rekom_filters %}
+    <div class="info-box">
+      <strong>Filter yang digunakan:</strong><br>
+      Budget maksimal: Rp {{ '{:,.0f}'.format(rekom_filters.budget).replace(',', '.') if rekom_filters.budget else 'Tidak ditentukan' }}<br>
+      Kota: {{ rekom_filters.city or 'Semua kota' }}<br>
+      Minimal kamar tidur: {{ rekom_filters.minimum_bedrooms|int if rekom_filters.minimum_bedrooms else 'Tidak dibatasi' }}<br>
+      Minimal kamar mandi: {{ rekom_filters.minimum_bathrooms|int if rekom_filters.minimum_bathrooms else 'Tidak dibatasi' }}<br>
+      <strong>Total properti sesuai kriteria:</strong> {{ rekom_total }}
+    </div>
+    {% else %}
+    <p class="no-data">Belum ada filter rekomendasi yang dilakukan. Gunakan halaman Rekomendasi untuk menyaring properti.</p>
+    {% endif %}
+  </div>
+
+  <div class="section">
+    <div class="section-title">Peringkat Properti</div>
+    <p style="font-size:8pt; color:#64748b;">
+      Menampilkan peringkat {{ data.showing_from }}–{{ data.showing_to }} dari {{ data.total_count }} properti.
+    </p>
+    <table>
+      <thead>
+        <tr>
+          <th style="width:25px;">#</th>
+          <th>Judul</th>
+          <th>Kota</th>
+          <th>Area</th>
+          <th style="width:22px;">KT</th>
+          <th style="width:22px;">KM</th>
+          <th>Harga</th>
+          <th style="width:55px;">Fuzzy</th>
+          <th style="width:55px;">Skor</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in data.rankings %}
+        <tr>
+          <td class="rank">{{ row.Ranking }}</td>
+          <td>{{ row.title }}</td>
+          <td>{{ row.city }}</td>
+          <td>{{ row.district if row.district else '-' }}</td>
+          <td class="score">{{ row.bedrooms if row.bedrooms else '-' }}</td>
+          <td class="score">{{ row.bathrooms if row.bathrooms else '-' }}</td>
+          <td class="price">{{ row.PredictedPrice|rupiah }}</td>
+          <td class="score">{{ row.FuzzyScore|score_display }} / 100</td>
+          <td class="score">{{ row.TOPSIS_Score|score_percent }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="footer">
+    House Recommender AI &mdash; Dicetak oleh {{ username }}
+  </div>
+</body>
+</html>

@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+{% macro pagination(page, total_pages) %}
+{% set window = 2 %}
+<nav>
+  <ul class="pagination pagination-sm justify-content-center mb-0 mt-3">
+    <li class="page-item {{ 'disabled' if page <= 1 }}">
+      <a class="page-link" href="{{ url_for('rangking', page=page-1) if page > 1 else '#' }}"><i class="bi bi-chevron-left"></i></a>
+    </li>
+
+    {% set start = [1, page - window] | max %}
+    {% set end = [total_pages, page + window] | min %}
+
+    {% if start > 1 %}
+    <li class="page-item">
+      <a class="page-link" href="{{ url_for('rangking', page=1) }}">1</a>
+    </li>
+    {% if start > 2 %}
+    <li class="page-item disabled"><span class="page-link">…</span></li>
+    {% endif %}
+    {% endif %}
+
+    {% for p in range(start, end + 1) %}
+    <li class="page-item {{ 'active' if p == page }}">
+      <a class="page-link" href="{{ url_for('rangking', page=p) }}">{{ p }}</a>
+    </li>
+    {% endfor %}
+
+    {% if end < total_pages %}
+    {% if end < total_pages - 1 %}
+    <li class="page-item disabled"><span class="page-link">…</span></li>
+    {% endif %}
+    <li class="page-item">
+      <a class="page-link" href="{{ url_for('rangking', page=total_pages) }}">{{ total_pages }}</a>
+    </li>
+    {% endif %}
+
+    <li class="page-item {{ 'disabled' if page >= total_pages }}">
+      <a class="page-link" href="{{ url_for('rangking', page=page+1) if page < total_pages else '#' }}"><i class="bi bi-chevron-right"></i></a>
+    </li>
+  </ul>
+</nav>
+{% endmacro %}
+
+{% block content %}
+<div class="hero mb-4">
+  <div class="row align-items-center g-3">
+    <div class="col-lg-8">
+      {% if activated %}
+      <span class="hero-badge"><i class="bi bi-trophy"></i> Peringkat Properti</span>
+      <h1 class="h3 fw-bold mt-2 mb-2">20 peringkat teratas</h1>
+      <p class="text-muted mb-0">Setiap kunjungan menampilkan 20 properti berbeda yang belum pernah muncul sebelumnya.</p>
+      {% else %}
+      <span class="hero-badge"><i class="bi bi-list-columns"></i> Semua Properti</span>
+      <h1 class="h3 fw-bold mt-2 mb-2">Seluruh peringkat properti</h1>
+      <p class="text-muted mb-0">{{ total_count }} properti diperingkat berdasarkan skor peringkat — dari skor tertinggi hingga terendah.</p>
+      {% endif %}
+    </div>
+    <div class="col-lg-4">
+      <div class="hero-sidecard">
+        {% if activated and has_filters %}
+        <div class="small text-uppercase opacity-75 mb-1"><i class="bi bi-funnel-fill me-1"></i>Hasil rekomendasi</div>
+        <div class="fw-semibold mb-1">Properti yang sesuai dengan filter rekomendasi Anda.</div>
+        <div class="opacity-75 small">Menampilkan peringkat {{ showing_from }}–{{ showing_to }} dari {{ total_count }} properti.</div>
+        {% elif activated %}
+        <div class="small text-uppercase opacity-75 mb-1"><i class="bi bi-arrow-repeat me-1"></i>Jelajahi data</div>
+        <div class="fw-semibold mb-1">Setiap kali halaman ini dikunjungi, Anda akan melihat 20 properti yang berbeda.</div>
+        <div class="opacity-75 small">Menampilkan peringkat {{ showing_from }}–{{ showing_to }} dari {{ total_count }} properti.</div>
+        {% else %}
+        <div class="small text-uppercase opacity-75 mb-1"><i class="bi bi-trophy me-1"></i>Peringkat asli</div>
+        <div class="fw-semibold mb-1">20 properti dengan skor peringkat terbaik dari seluruh dataset.</div>
+        <div class="opacity-75 small">Lakukan prediksi atau rekomendasi untuk mulai menjelajahi data lainnya.</div>
+        {% endif %}
+      </div>
+    </div>
+    </div>
+  </div>
+</div>
+
+<div class="card result-table-card">
+  <div class="card-body p-4">
+    <div class="d-flex align-items-center justify-content-between gap-2 mb-3 flex-wrap">
+      <div class="d-flex align-items-center gap-2">
+        <i class="bi bi-bar-chart-steps text-primary fs-5"></i>
+        {% if activated %}
+        <div class="table-headline mb-0">Peringkat {{ showing_from }}–{{ showing_to }} dari {{ total_count }} properti.</div>
+        {% else %}
+        <div class="table-headline mb-0">Menampilkan {{ showing_from }}–{{ showing_to }} dari {{ total_count }} properti.</div>
+        {% endif %}
+      </div>
+      <div class="d-flex gap-2">
+        {% if activated %}
+        <a href="{{ url_for('rangking_reset') }}" class="btn btn-sm btn-outline-primary">
+          <i class="bi bi-arrow-counterclockwise me-1"></i>Kembali ke semua data
+        </a>
+        {% endif %}
+        <a href="{{ url_for('rangking_pdf') }}" class="btn btn-sm btn-outline-danger" target="_blank">
+          <i class="bi bi-filetype-pdf me-1"></i>Cetak PDF
+        </a>
+      </div>
+    </div>
+    <div class="table-responsive">
+      <table class="table align-middle {{ 'table-compact' if not activated }}">
+        <thead>
+          <tr>
+            <th>Peringkat</th>
+            <th>Judul</th>
+            <th>Kota</th>
+            <th>Estimasi Harga</th>
+            <th>FuzzyScore</th>
+            <th>Skor Peringkat</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in top_rankings %}
+          <tr>
+            <td>
+              <span class="badge-ranking badge-primary">#{{ row.Ranking }}</span>
+            </td>
+            <td class="recommendation-title" title="{{ row.title }}">{{ row.title }}</td>
+            <td>{{ row.city }}</td>
+            <td class="fw-semibold">{{ row.PredictedPrice|rupiah }}</td>
+            <td><span class="metric-inline">{{ row.FuzzyScore|score_display }} / 100</span></td>
+            <td><span class="metric-inline">{{ row.TOPSIS_Score|score_percent }}</span></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% if not activated and total_pages > 1 %}
+    {{ pagination(page, total_pages) }}
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

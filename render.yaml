@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: house-recommender-ai
+    runtime: python
+    repo: https://github.com/anggisaputra-23/house_recommender_ai.git
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app
+    envVars:
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DATABASE_URL
+        fromDatabase:
+          name: house-recommender-db
+          property: connectionString
+      - key: PYTHON_VERSION
+        value: 3.12.10
+
+databases:
+  - name: house-recommender-db
+    plan: free
+    databaseName: house_recommender

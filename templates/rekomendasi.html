@@ -1,0 +1,200 @@
+{% extends "base.html" %}
+{% macro pagination(page, total_pages) %}
+{% set window = 2 %}
+<nav>
+  <ul class="pagination pagination-sm justify-content-center mb-0 mt-3">
+    <li class="page-item {{ 'disabled' if page <= 1 }}">
+      <a class="page-link" href="{{ url_for('rekomendasi', page=page-1) if page > 1 else '#' }}"><i class="bi bi-chevron-left"></i></a>
+    </li>
+    {% set start = [1, page - window] | max %}
+    {% set end = [total_pages, page + window] | min %}
+    {% if start > 1 %}
+    <li class="page-item"><a class="page-link" href="{{ url_for('rekomendasi', page=1) }}">1</a></li>
+    {% if start > 2 %}
+    <li class="page-item disabled"><span class="page-link">…</span></li>
+    {% endif %}
+    {% endif %}
+    {% for p in range(start, end + 1) %}
+    <li class="page-item {{ 'active' if p == page }}">
+      <a class="page-link" href="{{ url_for('rekomendasi', page=p) }}">{{ p }}</a>
+    </li>
+    {% endfor %}
+    {% if end < total_pages %}
+    {% if end < total_pages - 1 %}
+    <li class="page-item disabled"><span class="page-link">…</span></li>
+    {% endif %}
+    <li class="page-item"><a class="page-link" href="{{ url_for('rekomendasi', page=total_pages) }}">{{ total_pages }}</a></li>
+    {% endif %}
+    <li class="page-item {{ 'disabled' if page >= total_pages }}">
+      <a class="page-link" href="{{ url_for('rekomendasi', page=page+1) if page < total_pages else '#' }}"><i class="bi bi-chevron-right"></i></a>
+    </li>
+  </ul>
+</nav>
+{% endmacro %}
+
+{% block content %}
+<div class="hero mb-4">
+  <div class="row align-items-center g-3">
+    <div class="col-lg-8">
+      <span class="hero-badge"><i class="bi bi-search-heart"></i> Rekomendasi Rumah</span>
+      <h1 class="h3 fw-bold mt-2 mb-2">Cari rumah sesuai budget dan kebutuhan</h1>
+      <p class="text-muted mb-0">Hasil diurutkan berdasarkan TOPSIS_Score tertinggi. Gunakan filter untuk hasil yang lebih spesifik.</p>
+    </div>
+    <div class="col-lg-4">
+      <div class="hero-sidecard">
+        {% if filtered %}
+        <div class="small text-uppercase opacity-75 mb-1"><i class="bi bi-funnel-fill me-1"></i>Hasil filter</div>
+        <div class="fw-semibold mb-1">{{ shown_count }} properti teratas yang sesuai dengan filter Anda.</div>
+        <div class="opacity-75 small">Dari {{ total_count }} properti yang cocok dengan kriteria.</div>
+        {% else %}
+        <div class="small text-uppercase opacity-75 mb-1"><i class="bi bi-grid-3x3-gap-fill me-1"></i>Semua data</div>
+        <div class="fw-semibold mb-1">Menampilkan seluruh {{ total_count }} properti yang diperingkat berdasarkan TOPSIS.</div>
+        <div class="opacity-75 small">Gunakan filter untuk melihat 20 rekomendasi teratas sesuai kebutuhan Anda.</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card mb-4 filter-card">
+  <div class="card-body p-4">
+    <div class="d-flex align-items-center gap-2 mb-3">
+      <i class="bi bi-funnel-fill text-primary fs-5"></i>
+      <h2 class="h5 mb-0">Filter pencarian</h2>
+    </div>
+    <form method="get" class="row g-3">
+      <div class="col-md-3">
+        <label class="form-label"><i class="bi bi-wallet2"></i> Budget maksimal</label>
+        <input name="budget" type="text" class="form-control" value="{{ '{:,.0f}'.format(filters.budget).replace(',', '.') if filters.budget else '' }}" placeholder="Rp 0" inputmode="numeric" data-rupiah>
+        <div class="form-text">Batas harga tertinggi (maks. {{ form_options.max_price_fmt }}).</div>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label"><i class="bi bi-geo-alt"></i> City</label>
+        <select name="city" class="form-select">
+          <option value="">Semua kota</option>
+          {% for item in form_options.cities %}
+          <option value="{{ item }}" {% if filters.city == item %}selected{% endif %}>{{ item }}</option>
+          {% endfor %}
+        </select>
+        <div class="form-text">Pilih kota agar hasil lebih spesifik.</div>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label"><i class="bi bi-door-open"></i> Minimum Bedrooms</label>
+        <select name="minimum_bedrooms" class="form-select">
+          <option value="">Tidak dibatasi</option>
+          {% for value in range(0, 11) %}
+          <option value="{{ value }}" {% if filters.minimum_bedrooms == value %}selected{% endif %}>{{ value }}+</option>
+          {% endfor %}
+        </select>
+        <div class="form-text">Minimal kamar tidur yang dibutuhkan.</div>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label"><i class="bi bi-droplet"></i> Minimum Bathrooms</label>
+        <select name="minimum_bathrooms" class="form-select">
+          <option value="">Tidak dibatasi</option>
+          {% for value in range(0, 11) %}
+          <option value="{{ value }}" {% if filters.minimum_bathrooms == value %}selected{% endif %}>{{ value }}+</option>
+          {% endfor %}
+        </select>
+        <div class="form-text">Minimal kamar mandi yang dibutuhkan.</div>
+      </div>
+      <div class="col-12 d-flex gap-2">
+        <button class="btn btn-primary"><i class="bi bi-search me-1"></i>Tampilkan Rekomendasi</button>
+        <a href="{{ url_for('rekomendasi') }}" class="btn btn-outline-secondary"><i class="bi bi-x-circle me-1"></i>Reset</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="card result-table-card">
+  <div class="card-body p-4">
+    <div class="d-flex align-items-center justify-content-between gap-2 mb-3 flex-wrap">
+      <div class="d-flex align-items-center gap-2">
+        <i class="bi bi-table text-primary fs-5"></i>
+        {% if filtered %}
+        <div class="table-headline mb-0">{{ shown_count }} rekomendasi teratas dari {{ total_count }} properti yang sesuai filter.</div>
+        {% else %}
+        <div class="table-headline mb-0">Menampilkan {{ showing_from }}–{{ showing_to }} dari {{ total_count }} properti.</div>
+        {% endif %}
+      </div>
+      {% if filtered %}
+      <a href="{{ url_for('rekomendasi') }}" class="btn btn-sm btn-outline-primary">
+        <i class="bi bi-arrow-counterclockwise me-1"></i>Kembali ke semua data
+      </a>
+      {% endif %}
+    </div>
+    <div class="table-responsive">
+      <table class="table align-middle {{ 'table-compact' if not filtered }}">
+        <thead>
+          <tr>
+            <th>Peringkat</th>
+            <th>Judul</th>
+            <th>Kota</th>
+            <th>Area</th>
+            <th><i class="bi bi-door-open"></i> KT</th>
+            <th><i class="bi bi-droplet"></i> KM</th>
+            <th>Estimasi Harga</th>
+            <th>FuzzyScore</th>
+            <th>TOPSIS</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in results %}
+          <tr>
+            <td>
+              {% if row.Ranking == 1 %}
+              <span class="badge-ranking badge-gold"><i class="bi bi-trophy-fill me-1"></i>#{{ row.Ranking }}</span>
+              {% elif row.Ranking == 2 %}
+              <span class="badge-ranking badge-silver"><i class="bi bi-award-fill me-1"></i>#{{ row.Ranking }}</span>
+              {% elif row.Ranking == 3 %}
+              <span class="badge-ranking badge-bronze"><i class="bi bi-award-fill me-1"></i>#{{ row.Ranking }}</span>
+              {% else %}
+              <span class="badge-ranking badge-primary">#{{ row.Ranking }}</span>
+              {% endif %}
+            </td>
+            <td class="recommendation-title" title="{{ row.title }}">{{ row.title }}</td>
+            <td>{{ row.city }}</td>
+            <td>{{ row.district }}</td>
+            <td class="text-center fw-semibold">{{ row.bedrooms }}</td>
+            <td class="text-center fw-semibold">{{ row.bathrooms }}</td>
+            <td class="fw-semibold">{{ row.PredictedPrice|rupiah }}</td>
+            <td><span class="metric-inline">{{ row.FuzzyScore|score_display }} / 100</span></td>
+            <td><span class="metric-inline">{{ row.TOPSIS_Score|score_percent }}</span></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% if not filtered and total_pages > 1 %}
+    {{ pagination(page, total_pages) }}
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  var input = document.querySelector('input[data-rupiah]');
+  if (!input) return;
+
+  function formatRupiah(val) {
+    var num = val.replace(/[^0-9]/g, '');
+    return num.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  }
+
+  input.addEventListener('input', function () {
+    var cursor = this.selectionStart;
+    var raw = this.value.replace(/[^0-9]/g, '');
+    var formatted = formatRupiah(this.value);
+    this.value = formatted;
+    var diff = formatted.length - raw.length;
+    this.setSelectionRange(cursor + diff, cursor + diff);
+  });
+
+  input.closest('form').addEventListener('submit', function () {
+    input.value = input.value.replace(/\./g, '');
+  });
+});
+</script>
+{% endblock %}
