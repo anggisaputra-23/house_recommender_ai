@@ -6,3 +6,5 @@ instance/*.db
 .DS_Store
 *.pkl
 !models/*.pkl
+*.log
+.claude/
